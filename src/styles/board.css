@@ -1,0 +1,179 @@
+/* ------------------------------------------------------------------ */
+/* The chessboard: wooden frame, squares, pieces, highlights & labels.  */
+/* ------------------------------------------------------------------ */
+
+/* The board scales with the viewport but is capped for desktop. */
+.board-frame {
+  --board-size: min(86vw, 70vh, 560px);
+  --label: 26px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--label) var(--board-size) var(--label);
+  grid-template-rows: var(--label) var(--board-size) var(--label);
+  grid-template-areas:
+    '.    top    .'
+    'left board  right'
+    '.    bottom .';
+  padding: 10px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--frame-light), var(--frame));
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 225, 170, 0.18),
+    inset 0 0 14px rgba(0, 0, 0, 0.5),
+    0 10px 26px rgba(0, 0, 0, 0.6);
+}
+
+.board-frame.disabled .board {
+  cursor: default;
+}
+
+.board {
+  grid-area: board;
+  width: var(--board-size);
+  height: var(--board-size);
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.45);
+}
+
+/* Coordinate labels around the board. */
+.rank-labels,
+.file-labels {
+  display: flex;
+  color: var(--text-cream);
+  font-weight: 700;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.rank-labels {
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.rank-labels.left {
+  grid-area: left;
+}
+.rank-labels.right {
+  grid-area: right;
+}
+
+.file-labels {
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.file-labels.top {
+  grid-area: top;
+}
+.file-labels.bottom {
+  grid-area: bottom;
+}
+
+/* Individual squares. */
+.square {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.square.light {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.05)),
+    var(--board-light);
+}
+
+.square.dark {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.12)),
+    var(--board-dark);
+}
+
+/* Last-move highlight (soft golden wash). */
+.square.last-move::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--hl-last);
+  pointer-events: none;
+}
+
+/* Selected square outline/glow. */
+.square.selected::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 4px rgba(255, 238, 150, 0.9);
+  background: rgba(255, 238, 150, 0.22);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* King-in-check highlight. */
+.square.in-check::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, var(--hl-check) 30%, transparent 72%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Legal quiet-move dot. */
+.move-dot {
+  position: absolute;
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(40, 26, 10, 0.4);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Legal capture ring. */
+.capture-ring {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 5px solid rgba(120, 30, 18, 0.55);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Pieces — solid Unicode glyphs colored by CSS. */
+.piece {
+  position: relative;
+  z-index: 4;
+  font-size: calc(var(--board-size) / 9.5);
+  line-height: 1;
+  pointer-events: none;
+}
+
+.piece.white {
+  color: #faf3e2;
+  text-shadow:
+    0 0 1px #6b4a2a,
+    0 1px 0 #8a6a44,
+    0 2px 3px rgba(0, 0, 0, 0.45);
+}
+
+.piece.black {
+  color: #36210f;
+  text-shadow:
+    0 1px 0 #1c1108,
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Outside the board (player bars, modals) glyphs need their own sizing. */
+.player-bar .piece,
+.gameover-time .piece {
+  font-size: 1.6rem;
+}

@@ -1,0 +1,101 @@
+/* ------------------------------------------------------------------ */
+/* Global reset, color palette and base typography for the wooden look. */
+/* ------------------------------------------------------------------ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Table / background woods */
+  --wood-dark: #2a1a0e;
+  --wood-darker: #160c05;
+
+  /* Golden panel woods */
+  --panel-gold: #d7a23f;
+  --panel-gold-light: #f2cd80;
+  --panel-gold-dark: #a9741f;
+  --bevel-light: #f8e0a6;
+  --bevel-dark: #6f4a12;
+
+  /* Text */
+  --text-cream: #f9f1df;
+  --text-brown: #4a2f12;
+
+  /* Board */
+  --board-light: #e9c9a0;
+  --board-dark: #9c6a3c;
+  --frame: #5a3d22;
+  --frame-light: #7c562f;
+
+  /* Highlights */
+  --hl-last: rgba(244, 205, 100, 0.5);
+  --hl-check: rgba(206, 52, 38, 0.7);
+
+  --font-main: 'Trebuchet MS', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-main);
+  color: var(--text-cream);
+  background:
+    radial-gradient(ellipse at top, #3c2715 0%, var(--wood-dark) 45%, var(--wood-darker) 100%) fixed;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 14px 36px;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+
+/* Big bold white heading used across screens. */
+.heading {
+  color: #fff;
+  text-align: center;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.55);
+}
+
+.engine-warning {
+  max-width: 460px;
+  text-align: center;
+  color: #ffd9a0;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 210, 140, 0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+}
