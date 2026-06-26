@@ -7,7 +7,7 @@ import GameOverModal from './components/GameOverModal'
 import PauseMenu from './components/PauseMenu'
 import ConfirmDialog from './components/ConfirmDialog'
 import { useChessGame } from './hooks/useChessGame'
-import { useStockfish } from './hooks/useStockfish'
+import { useStockfish, DIFFICULTY } from './hooks/useStockfish'
 import { formatTime } from './utils/timeHelpers'
 
 // Small status strip showing a side's clock and whether it is their turn.
@@ -36,26 +36,75 @@ export default function App() {
   const [aiThinking, setAiThinking] = useState(false)
   const [confirm, setConfirm] = useState(null) // { message, confirmLabel, onConfirm }
 
-  const [times, setTimes] = useState({ w: 0, b: 0 })
+  const [times, setTimes] = useState({ w: 0, b: 0 }) // displayed seconds per side
 
   // Generation counter: bumped on reset/home so any in-flight engine reply that
   // resolves late is ignored instead of being played onto a fresh board.
   const genRef = useRef(0)
 
   // ---------- Clocks ----------
-  // A single 1s interval that adds to whichever side is to move while running.
-  const runningRef = useRef(false)
-  const turnRef = useRef('w')
-  runningRef.current = screen === 'game' && !paused && !chess.result && !reviewMode
-  turnRef.current = chess.turn
+  // We attribute real elapsed wall-clock time to whichever side is on the move,
+  // measured at each move boundary. This way even the computer's sub-second
+  // turns are counted (a naive "+1s to the current turn every tick" loses them).
+  const timesRef = useRef({ w: 0, b: 0 }) // accumulated milliseconds
+  const segStartRef = useRef(0) // performance.now() when the current segment began
+  const activeColorRef = useRef('w') // side currently being timed
+  const clockRunningRef = useRef(false)
 
+  const syncDisplay = useCallback(() => {
+    let { w, b } = timesRef.current
+    if (clockRunningRef.current) {
+      const delta = performance.now() - segStartRef.current
+      if (activeColorRef.current === 'w') w += delta
+      else b += delta
+    }
+    setTimes({ w: w / 1000, b: b / 1000 })
+  }, [])
+
+  // Bank the in-progress segment against the side currently being timed.
+  const flushSegment = useCallback(() => {
+    if (!clockRunningRef.current) return
+    const now = performance.now()
+    timesRef.current[activeColorRef.current] += now - segStartRef.current
+    segStartRef.current = now
+  }, [])
+
+  const resetClocks = useCallback(() => {
+    timesRef.current = { w: 0, b: 0 }
+    segStartRef.current = performance.now()
+    activeColorRef.current = 'w'
+    setTimes({ w: 0, b: 0 })
+  }, [])
+
+  // Start/stop the clock as the game pauses, ends, or the screen changes.
+  useEffect(() => {
+    const shouldRun = screen === 'game' && !paused && !chess.result && !reviewMode
+    if (shouldRun && !clockRunningRef.current) {
+      segStartRef.current = performance.now()
+      clockRunningRef.current = true
+    } else if (!shouldRun && clockRunningRef.current) {
+      flushSegment()
+      clockRunningRef.current = false
+      syncDisplay()
+    }
+  }, [screen, paused, chess.result, reviewMode, flushSegment, syncDisplay])
+
+  // On every move the side to move changes: bank the finished segment against the
+  // side that just moved, then start timing the new side.
+  useEffect(() => {
+    if (!clockRunningRef.current) return
+    flushSegment()
+    activeColorRef.current = chess.turn
+    syncDisplay()
+  }, [chess.turn, flushSegment, syncDisplay])
+
+  // Live ticking of the displayed clock.
   useEffect(() => {
     const id = setInterval(() => {
-      if (!runningRef.current) return
-      setTimes((t) => ({ ...t, [turnRef.current]: t[turnRef.current] + 1 }))
-    }, 1000)
+      if (clockRunningRef.current) syncDisplay()
+    }, 500)
     return () => clearInterval(id)
-  }, [])
+  }, [syncDisplay])
 
   // ---------- Game lifecycle ----------
   const startGame = useCallback(
@@ -65,48 +114,59 @@ export default function App() {
       if (opts.difficulty) setDifficulty(opts.difficulty)
       if (opts.playerColor) setPlayerColor(opts.playerColor)
       chess.reset()
-      setTimes({ w: 0, b: 0 })
+      resetClocks()
       setPaused(false)
       setReviewMode(false)
       setAiThinking(false)
       setConfirm(null)
       setScreen('game')
     },
-    [chess],
+    [chess, resetClocks],
   )
 
   const restartGame = useCallback(() => {
     genRef.current += 1
     chess.reset()
-    setTimes({ w: 0, b: 0 })
+    resetClocks()
     setPaused(false)
     setReviewMode(false)
     setAiThinking(false)
     setConfirm(null)
-  }, [chess])
+  }, [chess, resetClocks])
 
   const goHome = useCallback(() => {
     genRef.current += 1
     chess.reset()
-    setTimes({ w: 0, b: 0 })
+    resetClocks()
     setPaused(false)
     setReviewMode(false)
     setAiThinking(false)
     setConfirm(null)
     setScreen('start')
-  }, [chess])
+  }, [chess, resetClocks])
 
   // ---------- Computer opponent ----------
   useEffect(() => {
     if (screen !== 'game' || mode !== 'pvc') return
     if (chess.result || reviewMode) return
-    if (engineError) return
     if (chess.turn === playerColor) return // human's move
     if (aiThinking) return
 
+    const cfg = DIFFICULTY[difficulty] || DIFFICULTY[2]
+    // Easiest levels (and any time the engine is unavailable) play a random legal
+    // move, which makes for a genuinely beginner-friendly opponent.
+    const playRandom = engineError || Math.random() < cfg.randomChance
+
     const myGen = genRef.current
     setAiThinking(true)
-    getBestMove(chess.fen, difficulty)
+
+    const movePromise = playRandom
+      ? new Promise((resolve) =>
+          setTimeout(() => resolve(chess.getRandomMoveUci()), 350),
+        )
+      : getBestMove(chess.fen, difficulty)
+
+    movePromise
       .then((uci) => {
         if (genRef.current !== myGen) return // game was reset meanwhile
         if (uci) chess.playUci(uci)
@@ -120,7 +180,7 @@ export default function App() {
     // We intentionally key this on the position (fen/turn) rather than the
     // changing `chess` object identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, mode, chess.fen, chess.turn, chess.result, reviewMode, playerColor, difficulty])
+  }, [screen, mode, chess.fen, chess.turn, chess.result, reviewMode, playerColor, difficulty, engineError])
 
   // ---------- Interaction ----------
   const humanTurn = mode === 'pvp' || chess.turn === playerColor

@@ -186,6 +186,15 @@ export function useChessGame() {
     setResult({ type: 'resign', winner: color === 'w' ? 'b' : 'w' })
   }, [])
 
+  // A random legal move for the side to move, in UCI form — used by the easy
+  // computer levels so the opponent plays like a beginner.
+  const getRandomMoveUci = useCallback(() => {
+    const moves = game.moves({ verbose: true })
+    if (!moves.length) return null
+    const m = moves[Math.floor(Math.random() * moves.length)]
+    return m.from + m.to + (m.promotion || '')
+  }, [game])
+
   return {
     fen: game.fen(),
     board,
@@ -205,5 +214,6 @@ export function useChessGame() {
     undo,
     reset,
     resign,
+    getRandomMoveUci,
   }
 }

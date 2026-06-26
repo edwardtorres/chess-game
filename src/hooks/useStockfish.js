@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-// Difficulty tuning for the three star levels. We combine Stockfish's "Skill
-// Level" option (0–20) with a capped search depth and per-move time budget so
-// the browser never freezes, even on level 3.
-const DIFFICULTY = {
-  1: { skill: 1, depth: 5, movetime: 250 }, // 1 star  — quick & weak
-  2: { skill: 8, depth: 10, movetime: 700 }, // 2 stars — medium
-  3: { skill: 18, depth: 14, movetime: 1200 }, // 3 stars — stronger
+// Difficulty tuning for the five star levels (1 = easiest, 5 = hardest).
+//
+// Two knobs work together:
+//   - `randomChance` is the probability (handled in App) that the computer just
+//     plays a RANDOM legal move instead of consulting the engine. Even at skill 0
+//     Stockfish grabs free pieces and avoids blunders, so randomness is what makes
+//     the easy levels genuinely beginner-friendly.
+//   - `skill` / `depth` / `movetime` tune Stockfish for the non-random moves. The
+//     capped depth and per-move time keep the browser responsive, even on level 5.
+export const DIFFICULTY = {
+  1: { randomChance: 1.0, skill: 0, depth: 1, movetime: 100 }, // ★      — always random (beginner)
+  2: { randomChance: 0.55, skill: 0, depth: 2, movetime: 200 }, // ★★     — mostly random, very easy
+  3: { randomChance: 0.25, skill: 4, depth: 4, movetime: 450 }, // ★★★    — casual
+  4: { randomChance: 0.07, skill: 9, depth: 8, movetime: 700 }, // ★★★★   — intermediate
+  5: { randomChance: 0.0, skill: 15, depth: 12, movetime: 1000 }, // ★★★★★  — strong (browser-safe)
 }
 
 /**

@@ -9,7 +9,7 @@ function toggleFullscreen() {
   }
 }
 
-const STARS = [1, 2, 3]
+const STARS = [1, 2, 3, 4, 5]
 
 export default function StartScreen({ onStart, engineError }) {
   const [difficulty, setDifficulty] = useState(2)
